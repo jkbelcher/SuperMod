@@ -44,6 +44,7 @@ import heronarts.lx.parameter.LXListenableNormalizedParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.LXParameterListener;
 import heronarts.lx.pattern.LXPattern;
+import jkbstudio.supermod.SuperMod.Device.ModParameter;
 
 public class APCminiMk2 extends LXMidiSurface implements LXMidiSurface.Bidirectional {
 
@@ -51,7 +52,6 @@ public class APCminiMk2 extends LXMidiSurface implements LXMidiSurface.Bidirecti
 
   public static final int NUM_CHANNELS = 8;
   public static final double PARAMETER_INCREMENT_AMOUNT = 0.1;
-
 
   // CCs
   public static final int CHANNEL_FADER = 48;
@@ -65,6 +65,12 @@ public class APCminiMk2 extends LXMidiSurface implements LXMidiSurface.Bidirecti
   public static final int CLIP_LAUNCH_COLUMNS = NUM_CHANNELS;
   public static final int CLIP_LAUNCH_NUM = CLIP_LAUNCH_ROWS * CLIP_LAUNCH_COLUMNS;
   public static final int CLIP_LAUNCH_MAX = CLIP_LAUNCH + CLIP_LAUNCH_NUM - 1;
+
+  public static final int SUPERMOD_NUM_MODS = 32;
+  public static final int SUPERMOD_TEMPLATE_ROWS = 4;
+  public static final int SUPERMOD_TEMPLATE_COLUMNS = 8;
+  public static final int SUPERMOD_INDICATOR_ROWS = 4;
+  public static final int SUPERMOD_INDICATOR_COLUMNS = 4;
 
   public static final int FADER_CTRL_VOLUME = 100;
   public static final int FADER_CTRL_PAN = 101;
@@ -101,7 +107,6 @@ public class APCminiMk2 extends LXMidiSurface implements LXMidiSurface.Bidirecti
   public static final int PARAMETER_ROW_STRIDE = -4;
   public static final int PARAMETER_NUM = PARAMETER_COLUMNS * PARAMETER_ROWS;
   public static final int PARAMETER_START = (CLIP_LAUNCH_ROWS - 1) * CLIP_LAUNCH_COLUMNS + CLIP_LAUNCH;
-
 
   // Notes in combination with Shift
   public static final int SHIFT = 122;
@@ -182,6 +187,19 @@ public class APCminiMk2 extends LXMidiSurface implements LXMidiSurface.Bidirecti
   public static final int LED_PARAMETER_ISDEFAULT_BEHAVIOR = MIDI_CHANNEL_MULTI_100_PERCENT;
   public static final int LED_PARAMETER_ISDEFAULT_COLOR = LED_OFF;
 
+  public static final int LED_SUPERMOD_TEMPLATE_ACTIVE_BEHAVIOR = MIDI_CHANNEL_MULTI_100_PERCENT;
+  public static final int LED_SUPERMOD_TEMPLATE_ACTIVE_COLOR = LED_GREEN;
+  public static final int LED_SUPERMOD_TEMPLATE_INACTIVE_BEHAVIOR = MIDI_CHANNEL_MULTI_50_PERCENT;
+  public static final int LED_SUPERMOD_TEMPLATE_INACTIVE_COLOR_LOCAL = LED_WHITE;
+  public static final int LED_SUPERMOD_TEMPLATE_INACTIVE_COLOR_GLOBAL = LED_BLUE;
+
+  public static final int LED_SUPERMOD_MODULATION_NONE_BEHAVIOR = MIDI_CHANNEL_MULTI_100_PERCENT;
+  public static final int LED_SUPERMOD_MODULATION_NONE_COLOR = LED_WHITE;
+  public static final int LED_SUPERMOD_MODULATION_SUPERMOD_BEHAVIOR = MIDI_CHANNEL_MULTI_100_PERCENT;
+  public static final int LED_SUPERMOD_MODULATION_SUPERMOD_COLOR = LED_RED;
+  public static final int LED_SUPERMOD_MODULATION_OTHER_BEHAVIOR = MIDI_CHANNEL_MULTI_100_PERCENT;
+  public static final int LED_SUPERMOD_MODULATION_OTHER_COLOR = LED_YELLOW;
+
   public enum ChannelButtonMode {
     ARM,
     CROSSFADEGROUP,
@@ -213,12 +231,15 @@ public class APCminiMk2 extends LXMidiSurface implements LXMidiSurface.Bidirecti
     private LXPattern pattern = null;
     private LXBus channel = null;
 
-    private final LXListenableNormalizedParameter[] knobs =
-      new LXListenableNormalizedParameter[PARAMETER_NUM];
+    private final LXListenableNormalizedParameter[] knobs = new LXListenableNormalizedParameter[PARAMETER_NUM];
+    private final ModParameter[] mods = new ModParameter[SUPERMOD_NUM_MODS];
 
     DeviceListener() {
       for (int i = 0; i < this.knobs.length; ++i) {
         this.knobs[i] = null;
+      }
+      for (int i = 0; i < this.mods.length; ++i) {
+        this.mods[i] = null;
       }
     }
 
@@ -268,6 +289,7 @@ public class APCminiMk2 extends LXMidiSurface implements LXMidiSurface.Bidirecti
         }
 
         int i = 0;
+        int m = 0;
         if (this.device != null) {
           for (LXListenableNormalizedParameter parameter : getDeviceRemoteControls()) {
             if (i >= this.knobs.length) {
@@ -288,7 +310,6 @@ public class APCminiMk2 extends LXMidiSurface implements LXMidiSurface.Bidirecti
                 sendNoteOn(MIDI_CHANNEL_MULTI_100_PERCENT, patternButton - (CLIP_LAUNCH_COLUMNS * 3), LED_OFF);
               }
             } else {
-              // JKB: Added IF clause.  Why wasn't it here?
               if (isGridModeParameters()) {
                 sendNoteOn(MIDI_CHANNEL_MULTI_100_PERCENT, patternButton, LED_OFF);
                 sendNoteOn(MIDI_CHANNEL_MULTI_100_PERCENT, patternButton - CLIP_LAUNCH_COLUMNS, LED_OFF);
@@ -297,6 +318,19 @@ public class APCminiMk2 extends LXMidiSurface implements LXMidiSurface.Bidirecti
               }
             }
             ++i;
+          }
+          for (ModParameter mod : getDeviceRemoteMods()) {
+            if (m >= this.mods.length) {
+              break;
+            }
+            this.mods[m] = mod;
+            if (mod != null) {
+              mod.addListener(this);
+            }
+            if (isSuperMod()) {
+              sendSMIndicator(mod, m);
+            }
+            ++m;
           }
           this.device.controlSurfaceSemaphore.increment();
         }
@@ -310,11 +344,21 @@ public class APCminiMk2 extends LXMidiSurface implements LXMidiSurface.Bidirecti
             ++i;
           }
         }
+        if (isSuperMod()) {
+          while (m < this.mods.length) {
+            sendSMIndicator(null, m);
+            ++m;
+          }
+        }
       }
     }
 
     private LXListenableNormalizedParameter[] getDeviceRemoteControls() {
       return this.device.getRemoteControls();
+    }
+
+    private ModParameter[] getDeviceRemoteMods() {
+      return SuperMod.current.getRemoteMods(this.device);
     }
 
     @Override
@@ -334,7 +378,12 @@ public class APCminiMk2 extends LXMidiSurface implements LXMidiSurface.Bidirecti
             } else {
               sendNoteOn(LED_PARAMETER_RESET_BEHAVIOR, patternButton - (CLIP_LAUNCH_COLUMNS * 2), LED_PARAMETER_RESET_COLOR);
             }
-            break;
+          }
+        }
+      } else if (isSuperMod()) {
+        for (int i = 0; i < this.mods.length; ++i) {
+          if (parameter == this.mods[i]) {
+            sendSMIndicator((ModParameter)parameter, i);
           }
         }
       }
@@ -360,6 +409,30 @@ public class APCminiMk2 extends LXMidiSurface implements LXMidiSurface.Bidirecti
           }
           sendNoteOn(MIDI_CHANNEL_MULTI_100_PERCENT, patternButton - (CLIP_LAUNCH_COLUMNS * 3), LED_OFF);
         }
+      } else if (isSuperMod()) {
+        for (int i = 0; i < this.mods.length; ++i) {
+          sendSMIndicator(this.mods[i], i);
+        }
+      }
+    }
+
+    private void sendSMIndicator(ModParameter parameter, int i) {
+      int patternButton = getSMIndicatorButton(i);
+      if (parameter != null) {
+        switch (parameter.getState()) {
+          case SUPERMOD:
+            sendNoteOn(LED_SUPERMOD_MODULATION_SUPERMOD_BEHAVIOR, patternButton, LED_SUPERMOD_MODULATION_SUPERMOD_COLOR);
+            break;
+          case OTHER:
+            sendNoteOn(LED_SUPERMOD_MODULATION_OTHER_BEHAVIOR, patternButton, LED_SUPERMOD_MODULATION_OTHER_COLOR);
+            break;
+          case EMPTY:
+          default:
+            sendNoteOn(LED_SUPERMOD_MODULATION_NONE_BEHAVIOR, patternButton, LED_SUPERMOD_MODULATION_NONE_COLOR);
+            break;
+        }
+      } else {
+        sendNoteOn(MIDI_CHANNEL_MULTI_100_PERCENT, patternButton, LED_OFF);
       }
     }
 
@@ -367,6 +440,21 @@ public class APCminiMk2 extends LXMidiSurface implements LXMidiSurface.Bidirecti
       int row = index / PARAMETER_COLUMNS;
       int column = index % PARAMETER_COLUMNS;
       return PARAMETER_START + (row * CLIP_LAUNCH_COLUMNS * PARAMETER_ROW_STRIDE) + (column * PARAMETER_COLUMN_STRIDE);
+    }
+
+    /**
+     * Returns a MIDI note for an indicator grid button, given a mod/parameter index.
+     *
+     * SuperMod indicators will be the bottom left quadrant of 16 buttons
+     * followed by the bottom right quadrant of 16 buttons.
+     * Visually this will align with two 4x4 midi surfaces.
+     */
+    int getSMIndicatorButton(int index) {
+      int set = index / 16;
+      index = index % 16;
+      int row = index / SUPERMOD_INDICATOR_COLUMNS;
+      int column = index % SUPERMOD_INDICATOR_COLUMNS + (set * SUPERMOD_INDICATOR_COLUMNS);
+      return CLIP_LAUNCH + ((SUPERMOD_INDICATOR_ROWS - 1 - row) * CLIP_LAUNCH_COLUMNS) + column;
     }
 
     void onParameterButton(int columnIndex, int rowIndex) {
@@ -406,18 +494,34 @@ public class APCminiMk2 extends LXMidiSurface implements LXMidiSurface.Bidirecti
       }
     }
 
-    private void unregister(boolean clearParams) {
+    public void onSMIndicatorButton(int index) {
+      ModParameter mod = this.mods[index];
+      if (mod != null) {
+        mod.clearModulation();
+      }
+    }
+
+    private void unregister(boolean clearButtons) {
       if (this.device != null) {
         for (int i = 0; i < this.knobs.length; ++i) {
           if (this.knobs[i] != null) {
             this.knobs[i].removeListener(this);
             this.knobs[i] = null;
-            if (isGridModeParameters() && clearParams) {
+            if (isGridModeParameters() && clearButtons) {
               int patternButton = getPatternButton(i);
               sendNoteOn(MIDI_CHANNEL_SINGLE, patternButton, LED_OFF);
               sendNoteOn(MIDI_CHANNEL_SINGLE, patternButton - CLIP_LAUNCH_COLUMNS, LED_OFF);
               sendNoteOn(MIDI_CHANNEL_SINGLE, patternButton - (CLIP_LAUNCH_COLUMNS * 2), LED_OFF);
               sendNoteOn(MIDI_CHANNEL_SINGLE, patternButton - (CLIP_LAUNCH_COLUMNS * 3), LED_OFF);
+            }
+          }
+        }
+        for (int m = 0; m < this.mods.length; ++m) {
+          if (this.mods[m] != null) {
+            this.mods[m].removeListener(this);
+            this.mods[m] = null;
+            if (isSuperMod() && clearButtons) {
+              sendSMIndicator(null, m);
             }
           }
         }
@@ -613,27 +717,52 @@ public class APCminiMk2 extends LXMidiSurface implements LXMidiSurface.Bidirecti
     new BooleanParameter("Master Fader", true)
     .setDescription("Whether the master fader is enabled");
 
+  public final BooleanParameter channelFadersEnabled =
+    new BooleanParameter("Channel Faders", true)
+    .setDescription("Whether the channel faders are enabled");
+
+  public final BooleanParameter isSuperMod =
+    new BooleanParameter("SuperMod", true)
+    .setDescription("Use the surface as a SuperMod controller");
+
   public APCminiMk2(LX lx, LXMidiInput input, LXMidiOutput output) {
     super(lx, input, output);
     addSetting("masterFaderEnabled", this.masterFaderEnabled);
+    addSetting("channelFadersEnabled", this.channelFadersEnabled);
+    addSetting("isSuperMod", this.isSuperMod);
+
+    registerSM();
+  }
+
+  @Override
+  public void onParameterChanged(LXParameter parameter) {
+    if (parameter == this.isSuperMod) {
+      if (this.enabled.isOn()) {
+        sendGrid();
+      }
+    }
   }
 
   private boolean isGridModePatterns() {
-    return this.gridMode == GridMode.PATTERNS;
+    return this.gridMode == GridMode.PATTERNS && !this.isSuperMod();
   }
 
   private boolean isGridModeClips() {
-    return this.gridMode == GridMode.CLIPS;
+    return this.gridMode == GridMode.CLIPS && !this.isSuperMod();
   }
 
   private boolean isGridModeParameters() {
-    return this.gridMode == GridMode.PARAMETERS;
+    return this.gridMode == GridMode.PARAMETERS && !this.isSuperMod();
+  }
+
+  private boolean isSuperMod() {
+    return this.isSuperMod.getValueb() && this.isSMregistered;
   }
 
   @Override
   protected void onEnable(boolean on) {
     if (on) {
-      initialize(false);
+      initialize();
       register();
     } else {
       this.deviceListener.register(null);
@@ -651,12 +780,11 @@ public class APCminiMk2 extends LXMidiSurface implements LXMidiSurface.Bidirecti
   @Override
   protected void onReconnect() {
     if (this.enabled.isOn()) {
-      initialize(true);
-      this.deviceListener.resend();
+      initialize();
     }
   }
 
-  private void initialize(boolean reconnect) {
+  private void initialize() {
     sendGrid();
   }
 
@@ -666,6 +794,10 @@ public class APCminiMk2 extends LXMidiSurface implements LXMidiSurface.Bidirecti
     sendChannelButtonRow();
     if (isGridModeParameters()) {
       this.deviceListener.resend();
+    } else if (isSuperMod()) {
+      sendSMTemplates();
+      this.deviceListener.resend();
+      return;
     } else {
       for (int i = 0; i < NUM_CHANNELS; ++i) {
         LXAbstractChannel channel = getChannel(i);
@@ -683,15 +815,35 @@ public class APCminiMk2 extends LXMidiSurface implements LXMidiSurface.Bidirecti
     }
   }
 
+  private void sendSMTemplates() {
+    int behavior, note, color;
+    for (int index = 0; index < SUPERMOD_TEMPLATE_COLUMNS; ++index) {
+      boolean global = SuperMod.current.isTemplateGlobal(index);
+      for (int y = 0; y < SUPERMOD_TEMPLATE_ROWS; ++y) {
+        behavior = LED_SUPERMOD_TEMPLATE_INACTIVE_BEHAVIOR;
+        note = CLIP_LAUNCH + CLIP_LAUNCH_COLUMNS * (CLIP_LAUNCH_ROWS - 1 - y) + index;
+        color = global ? LED_SUPERMOD_TEMPLATE_INACTIVE_COLOR_GLOBAL : LED_SUPERMOD_TEMPLATE_INACTIVE_COLOR_LOCAL;
+        sendNoteOn(behavior, note, color);
+      }
+    }
+  }
+
   private void clearGrid() {
     sendNoteOn(MIDI_CHANNEL_MULTI_100_PERCENT, TOGGLE_CLIPS, LED_OFF);
     sendNoteOn(MIDI_CHANNEL_MULTI_100_PERCENT, TOGGLE_PARAMETERS, LED_OFF);
     for (int i = 0; i < NUM_CHANNELS; ++i) {
-      sendChannelPatterns(i, null);
+      sendChannelPatterns(i, null, true);
     }
   }
 
   private void sendChannelPatterns(int index, LXAbstractChannel channelBus) {
+    sendChannelPatterns(index, channelBus, false);
+  }
+
+  private void sendChannelPatterns(int index, LXAbstractChannel channelBus, boolean force) {
+    if (!force && isSuperMod()) {
+      return;
+    }
     if (index >= CLIP_LAUNCH_COLUMNS) {
       return;
     }
@@ -929,8 +1081,108 @@ public class APCminiMk2 extends LXMidiSurface implements LXMidiSurface.Bidirecti
     return null;
   }
 
+  /*
+   * SuperMod
+   */
+
+  private boolean isSMregistered = false;
+
+  private final SuperMod.Listener superModListener = new SuperMod.Listener() {
+    @Override
+    public void templatesChanged() {
+      if (isSuperMod()) {
+        sendSMTemplates();
+      }
+    }
+
+    /**
+     * Handle Chromatik versions where plugin disposes prior to midi surface on shutdown.
+     */
+    @Override
+    public void willDispose() {
+      if (isSMregistered) {
+        unregisterSM();
+        // Unregister ModParameters before SuperMod plugin disposes.
+        deviceListener.register(null);
+      }
+    }
+  };
+
+  private void registerSM() {
+    this.isSMregistered = true;
+    SuperMod.current.addListener(this.superModListener);
+  }
+
+  private void unregisterSM() {
+    this.isSMregistered = false;
+    SuperMod.current.removeListener(this.superModListener);
+  }
+
+  static private final int SM_INVALID = -1;
+  static private final int SM_TEMPLATE_MIN = 32;
+  static private final int SM_TEMPLATE_MAX = 64;
+
+  private boolean onSMGridButton(int pitch, boolean on) {
+    if (pitch == SHIFT) {
+      SuperMod.current.setModState(this, on);
+    } else if (SM_TEMPLATE_MIN <= pitch && pitch <= SM_TEMPLATE_MAX) {
+      // Button is within template zone (top 4 rows, any column)
+      SuperMod.current.setModState(this, on);
+      final int templatePitch = pitch - SM_TEMPLATE_MIN;
+      final int templateIndex = templatePitch % CLIP_LAUNCH_COLUMNS;
+      final int row = templatePitch - templateIndex;
+      final int templateVariation = (SUPERMOD_TEMPLATE_ROWS - (row / CLIP_LAUNCH_COLUMNS)) - 1;
+      if (on) {
+        SuperMod.current.setTemplate(this, templateIndex, templateVariation);
+        // TODO: Light buttons only in response to SuperMod property change (current template/variation)
+        sendNoteOn(LED_SUPERMOD_TEMPLATE_ACTIVE_BEHAVIOR, pitch, LED_SUPERMOD_TEMPLATE_ACTIVE_COLOR);
+      } else {
+        boolean global = SuperMod.current.isTemplateGlobal(templateIndex);
+        sendNoteOn(LED_SUPERMOD_TEMPLATE_INACTIVE_BEHAVIOR, pitch,
+          global ? LED_SUPERMOD_TEMPLATE_INACTIVE_COLOR_GLOBAL : LED_SUPERMOD_TEMPLATE_INACTIVE_COLOR_LOCAL);
+      }
+      return true;
+    } else {
+      // Button may be within indicator/mod zone
+      if (on) {
+        final int parameterButton = smGetParameterForButton(pitch);
+        if (parameterButton != SM_INVALID) {
+          this.deviceListener.onSMIndicatorButton(parameterButton);
+          return true;
+        }
+      }
+    }
+    // Unhandled, must be channel row or scene launch
+    return false;
+  }
+
+  private final int[] SM_PARAMETER_BUTTONS = { 24, 25, 26, 27,
+                                               16, 17, 18, 19,
+                                                8,  9, 10, 11,
+                                                0,  1,  2,  3,
+                                               28, 29, 30, 31,
+                                               20, 21, 22, 23,
+                                               12, 13, 14, 15,
+                                                4,  5,  6,  7};
+
+  private int smGetParameterForButton(int pitch) {
+    for (int i = 0; i < SM_PARAMETER_BUTTONS.length; i++) {
+      if (SM_PARAMETER_BUTTONS[i] == pitch) {
+        return i;
+      }
+    }
+    return SM_INVALID;
+  }
+
   private void noteReceived(MidiNote note, boolean on) {
     int pitch = note.getPitch();
+
+    if (isSuperMod()) {
+      // Tidy edit, expecting grid behavior will evolve.
+      if (onSMGridButton(pitch, on)) {
+        return;
+      }
+    }
 
     // Global momentary
     if (pitch == SHIFT) {
@@ -1138,9 +1390,11 @@ public class APCminiMk2 extends LXMidiSurface implements LXMidiSurface.Bidirecti
     }
 
     if (number >= CHANNEL_FADER && number <= CHANNEL_FADER_MAX) {
-      int channel = number - CHANNEL_FADER;
-      if (channel < this.lx.engine.mixer.channels.size()) {
-        this.lx.engine.mixer.channels.get(channel).fader.setNormalized(cc.getNormalized());
+      if (this.channelFadersEnabled.isOn()) {
+        int channel = number - CHANNEL_FADER;
+        if (channel < this.lx.engine.mixer.channels.size()) {
+          this.lx.engine.mixer.channels.get(channel).fader.setNormalized(cc.getNormalized());
+        }
       }
       return;
     }
@@ -1154,6 +1408,9 @@ public class APCminiMk2 extends LXMidiSurface implements LXMidiSurface.Bidirecti
       unregister();
     }
     this.deviceListener.dispose();
+    if (this.isSMregistered) {
+      unregisterSM();
+    }
     super.dispose();
   }
 

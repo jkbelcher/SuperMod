@@ -44,6 +44,7 @@ import heronarts.lx.parameter.LXParameterListener;
 import heronarts.lx.parameter.DiscreteParameter.IncrementMode;
 import heronarts.lx.parameter.EnumParameter;
 import heronarts.lx.utils.LXUtils;
+import jkbstudio.supermod.SuperMod.Device.ModParameter;
 
 public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.Bidirectional {
 
@@ -212,6 +213,10 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
   public final BooleanParameter isAux =
     new BooleanParameter("Aux", false)
     .setDescription("Whether this MFT controls the primary or aux channel");
+
+  public final BooleanParameter isSuperMod =
+    new BooleanParameter("SuperMod", true)
+    .setDescription("Indicates surface compatibility. Parameter doesn't change anything.");
 
   // SYSEX Definitions
 
@@ -577,12 +582,13 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
 
   private class DeviceListener implements FocusedDevice.Listener, LXParameterListener {
 
+    public static final int SUPERMOD_KNOB_OFFSET = 32;
+
     private final FocusedDevice focusedDevice;
 
     private LXDeviceComponent device = null;
 
-    private final LXListenableNormalizedParameter[] knobs =
-      new LXListenableNormalizedParameter[DEVICE_KNOB_NUM];
+    private final LXListenableNormalizedParameter[] knobs = new LXListenableNormalizedParameter[DEVICE_KNOB_NUM];
     private final int[] knobTicks = new int[DEVICE_KNOB_NUM];
     private final int[] knobIncrementSize = new int[DEVICE_KNOB_NUM];
 
@@ -654,11 +660,13 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
     }
 
     private void registerDeviceKnobs() {
+      LXListenableNormalizedParameter[] remoteControls = null;
 
       // Sysex config changes require reboot therefore must happen before MIDI commands
       int e = 0;
       if (this.device != null) {
-        for (LXListenableNormalizedParameter parameter : this.device.getRemoteControls()) {
+        remoteControls = getDeviceRemoteControls();
+        for (LXListenableNormalizedParameter parameter : remoteControls) {
           if (e >= this.knobs.length || e >= lxConfig.encoders.length) {
             break;
           }
@@ -684,7 +692,7 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
       if (this.device != null) {
         final boolean isAux = isAux();
         final List<LXParameter> uniqueParameters = new ArrayList<LXParameter>();
-        for (LXListenableNormalizedParameter parameter : this.device.getRemoteControls()) {
+        for (LXListenableNormalizedParameter parameter : remoteControls) {
           if (i >= this.knobs.length) {
             break;
           }
@@ -736,6 +744,35 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
         }
         sendControlChange(CHANNEL_ANIMATIONS_AND_BRIGHTNESS, DEVICE_KNOB + i, RGB_BRIGHTNESS_OFF);
         ++i;
+      }
+    }
+
+    private LXListenableNormalizedParameter[] getDeviceRemoteControls() {
+      if (isSuperMod()) {
+        // In SuperMod mode, use virtual banks 3 and 4 for the ModParameters.
+        // This allows fast switching without rebooting the surface.
+        ModParameter[] mods = SuperMod.current.getRemoteMods(this.device);
+        LXListenableNormalizedParameter[] remoteControls = this.device.getRemoteControls();
+        LXListenableNormalizedParameter[] combinedControls = new LXListenableNormalizedParameter[SUPERMOD_KNOB_OFFSET + mods.length];
+        for (int i = LXUtils.min(remoteControls.length, SUPERMOD_KNOB_OFFSET) - 1; i >= 0; i--) {
+          combinedControls[i] = remoteControls[i];
+        }
+        for (int i = remoteControls.length; i < SUPERMOD_KNOB_OFFSET; i++) {
+          combinedControls[i] = null;
+        }
+        for (int i = 0; i < mods.length; i++) {
+          combinedControls[i + SUPERMOD_KNOB_OFFSET] = mods[i];
+        }
+        return combinedControls;
+      } else {
+        return this.device.getRemoteControls();
+      }
+    }
+
+    public void onSuperModChanged() {
+      if (this.device != null) {
+        unregisterDeviceKnobs();
+        registerDeviceKnobs();
       }
     }
 
@@ -889,6 +926,9 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
     addSetting("focusMode", this.focusMode);
     addSetting("isAux", this.isAux);
     addSetting("currentBank", this.currentBank);
+    addSetting("isSuperMod", this.isSuperMod);
+
+    registerSM();
   }
 
   @Override
@@ -899,7 +939,13 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
       this.deviceListener.resend();
     } else if (this.currentBank == p) {
       updateBank(this.currentBank.getValuei(), false);
+    } else if (this.isSuperMod == p) {
+      this.deviceListener.onSuperModChanged();
     }
+  }
+
+  private boolean isSuperMod() {
+    return this.isSuperMod.getValueb() && this.isSMregistered;
   }
 
   private boolean inUpdateBank = false;
@@ -969,6 +1015,51 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
   @SuppressWarnings("unused")
   private void restoreConfig() {
     //this.userConfig.sendAll();  // Uncomment after pull is working
+  }
+
+  private boolean isSMregistered = false;
+
+  private final SuperMod.Listener superModListener = new SuperMod.Listener() {
+    /**
+     * SuperMod state indicates when parameter devices such as MFT should
+     * display a modulation control state instead of their normal parameters.
+     */
+    @Override
+    public void stateChanged(boolean isMod) {
+      if (isSuperMod()) {
+        if (isMod) {
+          if (currentBank.getValue() < BANK3) {
+            currentBank.increment(2);
+          }
+        } else {
+          // TODO: if user set the bank to > 2, leave it there.
+          if (currentBank.getValuei() > BANK2) {
+            currentBank.decrement(2);
+          }
+        }
+      }
+    }
+
+    /**
+     * Handle Chromatik versions where plugin disposes prior to midi surface on shutdown.
+     */
+    @Override
+    public void willDispose() {
+      if (isSMregistered) {
+        unregisterSM();
+        deviceListener.onSuperModChanged();
+      }
+    }
+  };
+
+  private void registerSM() {
+    this.isSMregistered = true;
+    SuperMod.current.addListener(this.superModListener);
+  }
+
+  private void unregisterSM() {
+    this.isSMregistered = false;
+    SuperMod.current.removeListener(this.superModListener);
   }
 
   @Override
@@ -1116,7 +1207,9 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
   @Override
   public void dispose() {
     this.deviceListener.dispose();
+    if (this.isSMregistered) {
+      unregisterSM();
+    }
     super.dispose();
   }
-
 }
