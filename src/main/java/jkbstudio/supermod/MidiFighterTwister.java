@@ -447,6 +447,7 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
       }
     }
 
+    @SuppressWarnings("unused")
     private void pull() {
       // TODO: Query current surface settings
 
