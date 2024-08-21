@@ -219,6 +219,68 @@ public class SuperMod extends LXComponent implements LXStudio.Plugin {
   }
 
   /*
+   * New for TE variation: Downstream can be a modulator source
+   */
+
+  public interface ModulatorSource {
+    /**
+     * Implement this method to create a modulator for a given col/row on the top half
+     * of the APC mini. Return null to get the default modulator.
+     */
+    LXModulator createModulator(String label, int col, int row);
+  }
+
+  private final List<ModulatorSource> modulatorSources = new ArrayList<ModulatorSource>();
+
+  public SuperMod addModulatorSource(ModulatorSource listener) {
+    Objects.requireNonNull(listener, "May not add null SuperMod.ModulatorSource: " + this);
+    if (this.modulatorSources.contains(listener)) {
+      throw new IllegalStateException("Cannot add duplicate SuperMod.ModulatorSource " + listener.getClass().getName());
+    }
+    this.modulatorSources.add(listener);
+    return this;
+  }
+
+  public SuperMod removeModulatorSource(ModulatorSource listener) {
+    if (!this.modulatorSources.contains(listener)) {
+      LX.error(new Exception(), "Trying to remove unregistered SuperMod.ModulatorSource " + listener.getClass().getName());
+    }
+    this.modulatorSources.remove(listener);
+    return this;
+  }
+
+  private LXModulator createModulator(String label, int row, int col) {
+    LXModulator modulator;
+    for (ModulatorSource listener : this.modulatorSources) {
+      modulator = listener.createModulator(label, row, col);
+      if (modulator != null) {
+        return modulator;
+      }
+    }
+
+    VariableLFO lfo = new VariableLFO(label);
+    lfo.clockMode.setValue(ClockMode.SYNC);
+    lfo.tempoDivision.setValue(tempos.get(templateIndex).getEnum());
+    LXWaveshape shape;
+    switch (templateVariation) {
+      case 3:
+        shape = LXWaveshape.UP;
+        break;
+      case 2:
+        shape = LXWaveshape.SQUARE;
+        break;
+      case 1:
+        shape = LXWaveshape.TRI;
+        break;
+      case 0:
+      default:
+        shape = LXWaveshape.SIN;
+    }
+    lfo.waveshape.setValue(shape);
+    return lfo;
+  }
+
+  /*
    * LX Plugin
    */
 
@@ -519,32 +581,13 @@ public class SuperMod extends LXComponent implements LXStudio.Plugin {
       if (modulator != null) {
         // Found user-created global modulator
         modulationEngine = lx.engine.modulation;
-      } else {        
+      } else {
         // Create a device-level modulator based on template settings
         modulationEngine = device.modulation;
         final String label = SUPERMOD_PREFIX + mod.target.getLabel();
-        VariableLFO lfo = new VariableLFO(label);
-        lfo.clockMode.setValue(ClockMode.SYNC);
-        lfo.tempoDivision.setValue(tempos.get(templateIndex).getEnum());
-        LXWaveshape shape;
-        switch (templateVariation) {
-          case 3:
-            shape = LXWaveshape.UP;
-            break;
-          case 2:
-            shape = LXWaveshape.SQUARE;
-            break;
-          case 1:
-            shape = LXWaveshape.TRI;
-            break;
-          case 0:
-          default:
-            shape = LXWaveshape.SIN;
-        }
-        lfo.waveshape.setValue(shape);
-        lfo.running.setValue(true);
-        modulationEngine.addModulator(lfo);
-        modulator = lfo;
+        modulator = createModulator(label, templateIndex, templateVariation);
+        modulator.running.setValue(true);
+        modulationEngine.addModulator(modulator);
       }
 
       try {
