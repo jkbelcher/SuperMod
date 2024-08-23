@@ -46,7 +46,7 @@ import heronarts.lx.utils.LXUtils;
 @LXPlugin.Name("SuperMod")
 public class SuperMod extends LXComponent implements LXStudio.Plugin {
 
-  static public final String VERSION = "0.1.0-SNAPSHOT";
+  static public final String VERSION = "0.1.3-SNAPSHOT";
   static public final String SUPERMOD_PREFIX = "SM_";
 
   static public SuperMod current;
@@ -371,7 +371,7 @@ public class SuperMod extends LXComponent implements LXStudio.Plugin {
 
       @Override
       public void modulationRemoved(Target parameter, LXCompoundModulation modulation) {
-        removeModulation(this.modulation);
+        removeModulation(modulation);
       }
 
       private void setModulation(LXCompoundModulation modulation) {
