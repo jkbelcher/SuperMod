@@ -4,6 +4,4 @@ This is a prototype of a new midi surface implementation.  It uses the APCminiMk
 
 Functionality is currently proof-of-concept.
 
-Demo video here:
-
-https://www.youtube.com/watch?v=oWj7WtVuhY4
+Demo video: https://www.youtube.com/watch?v=oWj7WtVuhY4
