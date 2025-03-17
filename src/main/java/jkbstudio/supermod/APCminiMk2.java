@@ -853,7 +853,7 @@ public class APCminiMk2 extends LXMidiSurface implements LXMidiSurface.Bidirecti
       // Button actions without Shift
       if (on) {
         if (pitch >= SCENE_LAUNCH && pitch <= SCENE_LAUNCH_MAX) {
-          this.lx.engine.clips.launchScene(pitch - SCENE_LAUNCH);
+          this.lx.engine.clips.triggerScene(pitch - SCENE_LAUNCH);
           return;
         }
 

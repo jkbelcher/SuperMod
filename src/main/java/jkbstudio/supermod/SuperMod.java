@@ -43,10 +43,10 @@ import heronarts.lx.utils.LXUtils;
  *
  * Allows creation of modulators on the fly from midi surfaces.
  */
-@LXPlugin.Name("SuperMod")
+@LXPlugin.Name("Super Mod")
 public class SuperMod extends LXComponent implements LXStudio.Plugin {
 
-  static public final String VERSION = "0.1.3-SNAPSHOT";
+  static public final String VERSION = "0.1.4-SNAPSHOT";
   static public final String SUPERMOD_PREFIX = "SM_";
 
   static public SuperMod current;
@@ -250,6 +250,14 @@ public class SuperMod extends LXComponent implements LXStudio.Plugin {
   }
 
   private LXModulator createModulator(String label, int row, int col) {
+    if (col > 3 && (row == 0 || row == 1)) {
+      if (row == 0) {
+        col = col - 4;
+      } else if (row == 1) {
+        row = 0;
+      }
+    }
+
     LXModulator modulator;
     for (ModulatorSource listener : this.modulatorSources) {
       modulator = listener.createModulator(label, row, col);
@@ -496,16 +504,18 @@ public class SuperMod extends LXComponent implements LXStudio.Plugin {
       private void clearModulation(LXCompoundModulation modulation) {
         LXModulationEngine modulationEngine = modulation.scope;
         LXModulator modulator = (LXModulator)modulation.source;
-        if (isSMmodulator(modulator)) {
+//        if (isSMmodulator(modulator)) {
           if (modulationEngine == device.modulation) {
             modulationEngine.removeModulator(modulator);
           } else {
             modulationEngine.removeModulation(modulation);                      
           }
+/*
         } else {
           // Non-SuperMod modulations will be reset but not deleted
           this.modulation.range.reset();
         }
+*/
       }
 
       @Override
