@@ -38,7 +38,7 @@ import heronarts.lx.parameter.LXParameterListener;
 import heronarts.lx.pattern.LXPattern;
 import studio.jkb.supermod.SuperMod.Device.ModParameter;
 
-@LXMidiSurface.Name("SuperMod (APC Mini mk2)")
+@LXMidiSurface.Name("Akai APC Mini mk2 SuperMod")
 @LXMidiSurface.DeviceName("APC mini mk2 Control")
 public class APCminiMk2 extends LXMidiSurface implements LXMidiSurface.Bidirectional {
 
