@@ -16,7 +16,7 @@
  * @author Mark C. Slee <mark@heronarts.com>
  */
 
-package jkbstudio.supermod;
+package studio.jkb.supermod;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -44,8 +44,10 @@ import heronarts.lx.parameter.LXParameterListener;
 import heronarts.lx.parameter.DiscreteParameter.IncrementMode;
 import heronarts.lx.parameter.EnumParameter;
 import heronarts.lx.utils.LXUtils;
-import jkbstudio.supermod.SuperMod.Device.ModParameter;
+import studio.jkb.supermod.SuperMod.Device.ModParameter;
 
+@LXMidiSurface.Name("MidiFighterTwister SuperMod")
+@LXMidiSurface.DeviceName("Midi Fighter Twister")
 public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.Bidirectional {
 
   public static final String DEVICE_NAME = "Midi Fighter Twister";
@@ -409,7 +411,7 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
             }
 
             // LXMidiEngine.log("MFT Encoder sysex(" + this.encoderIndex + "): " + bytesToString(payload));
-            output.sendSysex(payload);
+            sendSysex(payload);
           }
         }
 
@@ -434,7 +436,7 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
         payload[7] = (byte)0xf7;                    // End sysex
 
         // LXMidiEngine.log("MFT Encoder sysex(" + this.encoderIndex + "): " + bytesToString(payload));
-        output.sendSysex(payload);
+        sendSysex(payload);
 
         // TODO: Process response
       }
@@ -507,7 +509,7 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
       sysex[iSys] = (byte)0xf7;
 
       // LXMidiEngine.log("MFT System sysex:      " + bytesToString(sysex));
-      output.sendSysex(sysex);
+      sendSysex(sysex);
     }
 
     private void initializeLXDefaults() {

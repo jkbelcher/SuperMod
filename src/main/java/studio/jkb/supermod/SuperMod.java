@@ -4,7 +4,7 @@
  * @author Justin K. Belcher <justin@jkb.studio>
  */
 
-package jkbstudio.supermod;
+package studio.jkb.supermod;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -46,7 +46,7 @@ import heronarts.lx.utils.LXUtils;
 @LXPlugin.Name("SuperMod")
 public class SuperMod extends LXComponent implements LXStudio.Plugin {
 
-  static public final String VERSION = "0.1.3-SNAPSHOT";
+  static public final String VERSION = "0.1.5-SNAPSHOT";
   static public final String SUPERMOD_PREFIX = "SM_";
 
   static public SuperMod current;
@@ -287,8 +287,8 @@ public class SuperMod extends LXComponent implements LXStudio.Plugin {
   @Override
   public void initialize(LX lx) {
     // Special midi surface versions
-    registerAPCmini2(SUPERMOD_PREFIX + jkbstudio.supermod.APCminiMk2.DEVICE_NAME);
-    registerMidiFighterTwister(SUPERMOD_PREFIX + jkbstudio.supermod.MidiFighterTwister.DEVICE_NAME);
+    registerAPCmini2(SUPERMOD_PREFIX + APCminiMk2.DEVICE_NAME);
+    registerMidiFighterTwister(SUPERMOD_PREFIX + MidiFighterTwister.DEVICE_NAME);
 
     lx.engine.modulation.addListener(this.globalModulationListener);
   }
@@ -300,7 +300,7 @@ public class SuperMod extends LXComponent implements LXStudio.Plugin {
    * @param apcMiniMk2 System MIDI surface name for APCminiMk2
    */
   public void registerAPCmini2(String apcMiniMk2) {
-    this.lx.engine.midi.registerSurface(apcMiniMk2, jkbstudio.supermod.APCminiMk2.class);
+    this.lx.engine.midi.registerSurface(APCminiMk2.class);
   }
 
   /**
@@ -310,7 +310,7 @@ public class SuperMod extends LXComponent implements LXStudio.Plugin {
    * @param midiFighterTwister System MIDI surface name for MidiFighterTwister
    */
   public void registerMidiFighterTwister(String midiFighterTwister) {
-    this.lx.engine.midi.registerSurface(midiFighterTwister, jkbstudio.supermod.MidiFighterTwister.class);    
+    this.lx.engine.midi.registerSurface(MidiFighterTwister.class);
   }
 
   @Override

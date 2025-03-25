@@ -4,7 +4,7 @@
  * @author Justin K. Belcher <justin@jkb.studio>
  */
 
-package jkbstudio.supermod;
+package studio.jkb.supermod;
 
 import heronarts.glx.ui.UI;
 import heronarts.glx.ui.UI2dComponent;

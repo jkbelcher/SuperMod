@@ -17,35 +17,29 @@
  * @author Justin K. Belcher <justin@jkb.studio>
  */
 
-package jkbstudio.supermod;
-
-import java.util.HashMap;
-import java.util.Map;
+package studio.jkb.supermod;
 
 import heronarts.lx.LX;
 import heronarts.lx.LXDeviceComponent;
-import heronarts.lx.clip.LXClip;
 import heronarts.lx.effect.LXEffect;
-import heronarts.lx.midi.LXMidiEngine;
 import heronarts.lx.midi.LXMidiInput;
 import heronarts.lx.midi.LXMidiOutput;
-import heronarts.lx.midi.MidiControlChange;
 import heronarts.lx.midi.MidiNote;
 import heronarts.lx.midi.MidiNoteOn;
 import heronarts.lx.midi.surface.LXMidiSurface;
 import heronarts.lx.mixer.LXBus;
 import heronarts.lx.mixer.LXChannel;
 import heronarts.lx.mixer.LXAbstractChannel;
-import heronarts.lx.mixer.LXGroup;
-import heronarts.lx.mixer.LXMixerEngine;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.DiscreteParameter;
 import heronarts.lx.parameter.LXListenableNormalizedParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.LXParameterListener;
 import heronarts.lx.pattern.LXPattern;
-import jkbstudio.supermod.SuperMod.Device.ModParameter;
+import studio.jkb.supermod.SuperMod.Device.ModParameter;
 
+@LXMidiSurface.Name("SuperMod (APC Mini mk2)")
+@LXMidiSurface.DeviceName("APC mini mk2 Control")
 public class APCminiMk2 extends LXMidiSurface implements LXMidiSurface.Bidirectional {
 
   public static final String DEVICE_NAME = "APC mini mk2 Control";
@@ -853,7 +847,7 @@ public class APCminiMk2 extends LXMidiSurface implements LXMidiSurface.Bidirecti
       // Button actions without Shift
       if (on) {
         if (pitch >= SCENE_LAUNCH && pitch <= SCENE_LAUNCH_MAX) {
-          this.lx.engine.clips.launchScene(pitch - SCENE_LAUNCH);
+          this.lx.engine.clips.triggerScene(pitch - SCENE_LAUNCH);
           return;
         }
 
