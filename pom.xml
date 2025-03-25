@@ -19,7 +19,11 @@
         <maven-source-plugin.version>3.0.1</maven-source-plugin.version>
         <maven-compiler-plugin.version>3.8.0</maven-compiler-plugin.version>
         <maven-resources-plugin.version>3.3.1</maven-resources-plugin.version>
-        
+
+        <!-- Optionally don't copy compiled jar to ~/Chromatik/Packages -->
+        <!-- Use when compiling this plugin into an uber-plugin -->
+        <!-- Usage: 'mvn clean install -Dskip-chromatik-package=true' -->
+        <skip-chromatik-package>false</skip-chromatik-package>
     </properties>
 
 <!--    <repositories>
@@ -76,6 +80,7 @@
                             <goal>copy-resources</goal>
                         </goals>
                         <configuration>
+                            <skip>${skip-chromatik-package}</skip>
                             <outputDirectory>${user.home}/Chromatik/Packages</outputDirectory>
                             <resources>
                                 <resource>
