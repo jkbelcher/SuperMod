@@ -6,13 +6,23 @@
     <artifactId>supermod</artifactId>
     <version>0.1.5-SNAPSHOT</version>
     <packaging>jar</packaging>
+
     <name>SuperMod</name>
+    <description>SuperMod midi controller plugin for Chromatik. Allows fast creation of modulators on the fly.</description>
+    <url>https://github.com/jkbelcher/SuperMod</url>
+    <inceptionYear>2024</inceptionYear>
+    <developers>
+        <developer>
+            <name>Justin K. Belcher</name>
+            <email>justin@jkb.studio</email>
+        </developer>
+    </developers>
 
     <properties>
         <maven.compiler.release>21</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
-        <lx.version>1.0.1.JKB.1-SNAPSHOT</lx.version>
+        <lx.version>1.0.1-JKB.2-SNAPSHOT</lx.version>
         <maven-assembly-plugin.version>3.1.0</maven-assembly-plugin.version>
         <exec-maven-plugin.version>1.6.0</exec-maven-plugin.version>
         <maven-javadoc-plugin.version>3.2.0</maven-javadoc-plugin.version>
@@ -91,22 +101,26 @@
                             </resources>
                         </configuration>
                     </execution>
-                </executions>
-            </plugin>
-<!--            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-install-plugin</artifactId>
-                <version>3.1.0</version>
-                <executions>
                     <execution>
-                        <id>default-install</id>
-                        <phase>install</phase>
+                        <id>filter-resources</id>
+                        <phase>process-resources</phase>
                         <goals>
-                            <goal>install</goal>
+                            <goal>resources</goal>
                         </goals>
+                        <configuration>
+                            <resources>
+                                <resource>
+                                    <directory>src/main/resources</directory>
+                                    <includes>
+                                        <include>lx.package</include>
+                                    </includes>
+                                    <filtering>true</filtering>
+                                </resource>
+                            </resources>
+                        </configuration>
                     </execution>
                 </executions>
-            </plugin>-->
+            </plugin>
         </plugins>
     </build>
 </project>

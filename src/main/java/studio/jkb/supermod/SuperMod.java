@@ -205,7 +205,7 @@ public class SuperMod extends LXComponent implements LXStudio.Plugin {
 
   public SuperMod(LX lx) {
     super(lx);
-    LX.log("SuperMod Plugin version " + VERSION);
+    LOG.log("SuperMod Plugin version " + VERSION);
     current = this;
 
     addParameter("tempo1", this.tempo1);
@@ -721,7 +721,7 @@ public class SuperMod extends LXComponent implements LXStudio.Plugin {
 
   public final SuperMod removeListener(Listener listener) {
     if (!this.listeners.contains(listener)) {
-      LX.error(new Exception(), "Trying to remove unregistered SuperMod.Listener " + listener.getClass().getName());
+      LOG.error(new Exception(), "Trying to remove unregistered SuperMod.Listener " + listener.getClass().getName());
     }
     this.listeners.remove(listener);
     return this;
@@ -734,7 +734,7 @@ public class SuperMod extends LXComponent implements LXStudio.Plugin {
   }
 
   private static void debug(String message) {
-    // LX.log(message);
+    // LOG.log(message);
   }
 
   /*
@@ -743,7 +743,7 @@ public class SuperMod extends LXComponent implements LXStudio.Plugin {
 
   @Override
   public void dispose() {
-    LX.log("SuperMod.dispose()");
+    LOG.log("SuperMod.dispose()");
     for (int i = this.listeners.size() - 1; i >= 0; i--) {
       this.listeners.get(i).willDispose();
     }
