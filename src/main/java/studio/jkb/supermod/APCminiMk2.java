@@ -511,7 +511,7 @@ public class APCminiMk2 extends LXMidiSurface implements LXMidiSurface.Bidirecti
       for (int y = 0; y < SUPERMOD_TEMPLATE_ROWS; ++y) {
         behavior = LED_SUPERMOD_TEMPLATE_INACTIVE_BEHAVIOR;
         note = CLIP_LAUNCH + CLIP_LAUNCH_COLUMNS * (CLIP_LAUNCH_ROWS - 1 - y) + index;
-        color = global ? LED_SUPERMOD_TEMPLATE_INACTIVE_COLOR_GLOBAL : LED_SUPERMOD_TEMPLATE_INACTIVE_COLOR_LOCAL;
+        color = global ? LED_SUPERMOD_TEMPLATE_INACTIVE_COLOR_GLOBAL : (y > 1 ? LED_OFF : LED_SUPERMOD_TEMPLATE_INACTIVE_COLOR_LOCAL);
         sendNoteOn(behavior, note, color);
       }
     }
