@@ -210,7 +210,7 @@ public class APCminiMk2 extends LXMidiSurface implements LXMidiSurface.Bidirecti
       unregisterChannel();
       this.channel = channel;
       if (channel instanceof LXChannel) {
-        ((LXChannel) channel).focusedPattern.addListener(this);
+        ((LXChannel) channel).patternEngine.focusedPattern.addListener(this);
         register(((LXChannel) channel).getFocusedPattern());
       } else if (channel.effects.size() > 0) {
         register(channel.getEffect(0));
@@ -301,7 +301,7 @@ public class APCminiMk2 extends LXMidiSurface implements LXMidiSurface.Bidirecti
     public void onParameterChanged(LXParameter parameter) {
       if ((this.channel != null) &&
           (this.channel instanceof LXChannel) &&
-          (parameter == ((LXChannel)this.channel).focusedPattern)) {
+          (parameter == ((LXChannel)this.channel).patternEngine.focusedPattern)) {
         if ((this.device == null) || (this.device instanceof LXPattern)) {
           register(((LXChannel) this.channel).getFocusedPattern());
         }
@@ -441,7 +441,7 @@ public class APCminiMk2 extends LXMidiSurface implements LXMidiSurface.Bidirecti
     private void unregisterChannel() {
       if (this.channel != null) {
         if (this.channel instanceof LXChannel) {
-          ((LXChannel) this.channel).focusedPattern.removeListener(this);
+          ((LXChannel) this.channel).patternEngine.focusedPattern.removeListener(this);
         }
       }
       this.channel = null;
@@ -536,7 +536,7 @@ public class APCminiMk2 extends LXMidiSurface implements LXMidiSurface.Bidirecti
       int endIndex = channel.patterns.size() - baseIndex;
       int activeIndex = channel.getActivePatternIndex() - baseIndex;
       int nextIndex = channel.getNextPatternIndex() - baseIndex;
-      int focusedIndex = channel.focusedPattern.getValuei() - baseIndex;
+      int focusedIndex = channel.patternEngine.focusedPattern.getValuei() - baseIndex;
       if (channel.patterns.size() == 0) {
         focusedIndex = -1;
       }
@@ -862,7 +862,7 @@ public class APCminiMk2 extends LXMidiSurface implements LXMidiSurface.Bidirecti
               LXChannel c = (LXChannel) channel;
               //index += c.controlSurfaceFocusIndex.getValuei();
               if (index < c.getPatterns().size()) {
-                c.focusedPattern.setValue(index);
+                c.patternEngine.focusedPattern.setValue(index);
                 if (!this.shiftOn) {
                   c.goPatternIndex(index);
                 }
