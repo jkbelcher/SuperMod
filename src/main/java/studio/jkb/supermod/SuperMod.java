@@ -287,30 +287,10 @@ public class SuperMod extends LXComponent implements LXStudio.Plugin {
   @Override
   public void initialize(LX lx) {
     // Special midi surface versions
-    registerAPCmini2(SUPERMOD_PREFIX + APCminiMk2.DEVICE_NAME);
-    registerMidiFighterTwister(SUPERMOD_PREFIX + MidiFighterTwister.DEVICE_NAME);
+    this.lx.engine.midi.registerSurface(APCminiMk2.class);
+    this.lx.engine.midi.registerSurface(MidiFighterTwister.class);
 
     lx.engine.modulation.addListener(this.globalModulationListener);
-  }
-
-  /**
-   * A project may call this method to specify a system device name
-   * for the SuperMod version of the APCminiMk2 MIDI surface.
-   *
-   * @param apcMiniMk2 System MIDI surface name for APCminiMk2
-   */
-  public void registerAPCmini2(String apcMiniMk2) {
-    this.lx.engine.midi.registerSurface(APCminiMk2.class);
-  }
-
-  /**
-   * A project may call this method to specify a system device name
-   * for the SuperMod version of the MidiFighterTwister MIDI surface.
-   *
-   * @param midiFighterTwister System MIDI surface name for MidiFighterTwister
-   */
-  public void registerMidiFighterTwister(String midiFighterTwister) {
-    this.lx.engine.midi.registerSurface(MidiFighterTwister.class);
   }
 
   @Override
